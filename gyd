@@ -1,0 +1,85 @@
+from web3 import Web3
+
+# Connect to Ethereum network (Using Infura or a local node)
+infura_url = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+web3 = Web3(Web3.HTTPProvider(infura_url))
+
+# Check if connected to the Ethereum network
+if not web3.isConnected():
+    print("Failed to connect to the Ethereum network.")
+    exit()
+
+# Contract ABI and Address
+contract_address = "0xYourSmartContractAddress"  # Replace with your contract's address
+contract_abi = [
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "get",
+        "outputs": [{"name": "", "type": "uint256"}],
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "constant": False,
+        "inputs": [{"name": "x", "type": "uint256"}],
+        "name": "set",
+        "outputs": [],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {
+        "anonymous": False,
+        "inputs": [{"indexed": False, "name": "data", "type": "uint256"}],
+        "name": "DataStored",
+        "type": "event",
+    }
+]
+
+# Instantiate the contract
+contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+
+# Reading data (calling a view function)
+def get_stored_data():
+    stored_data = contract.functions.get().call()
+    print(f"Stored data is: {stored_data}")
+    return stored_data
+
+# Writing data (sending a transaction)
+def set_stored_data(account, private_key, value):
+    # Build the transaction
+    transaction = contract.functions.set(value).buildTransaction({
+        'gas': 2000000,
+        'gasPrice': web3.toWei('10', 'gwei'),
+        'nonce': web3.eth.getTransactionCount(account),
+    })
+
+    # Sign the transaction
+    signed_txn = web3.eth.account.signTransaction(transaction, private_key)
+
+    # Send the transaction
+    txn_hash = web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+
+    # Wait for transaction receipt
+    txn_receipt = web3.eth.waitForTransactionReceipt(txn_hash)
+    print(f"Transaction receipt: {txn_receipt}")
+    return txn_receipt
+
+# Example usage
+if __name__ == "__main__":
+    # Read data from the contract
+    get_stored_data()
+
+    # Replace these with actual account details
+    account = "0xYourEthereumAddress"
+    private_key = "your_private_key"  # NEVER hard-code your private key in production!
+
+    # Write data to the contract
+    new_value = 42
+    print(f"Setting stored data to: {new_value}")
+    set_stored_data(account, private_key, new_value)
+
+    # Read data again to confirm
+    get_stored_data()
